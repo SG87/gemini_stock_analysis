@@ -69,20 +69,26 @@ def main() -> None:
 
         # Store in vector database
         print("Storing in vector database...")
-        if embeddings:
-            vector_store.add_documents(
-                documents=documents[:10],
-                embeddings=embeddings,
-                metadatas=metadatas[:10],
-                ids=[f"row_{i}" for i in range(len(documents[:10]))],
-            )
-        else:
-            # Use ChromaDB's default embedding function
-            vector_store.add_documents(
-                documents=documents[:10],
-                metadatas=metadatas[:10],
-                ids=[f"row_{i}" for i in range(len(documents[:10]))],
-            )
+        # Always provide embeddings to avoid ChromaDB CoreML/ONNX issues on macOS
+        if not embeddings:
+            # Generate fallback embeddings if Gemini embeddings are not available
+            import hashlib
+            print("Using fallback embeddings (Gemini embeddings not available)")
+            embeddings = []
+            for doc in documents[:10]:
+                hash_obj = hashlib.sha256(doc.encode())
+                hash_bytes = hash_obj.digest()
+                embedding = [float(b) / 255.0 for b in hash_bytes[:128]] + [0.0] * (
+                    128 - len(hash_bytes[:128])
+                )
+                embeddings.append(embedding)
+
+        vector_store.add_documents(
+            documents=documents[:10],
+            embeddings=embeddings,
+            metadatas=metadatas[:10],
+            ids=[f"row_{i}" for i in range(len(documents[:10]))],
+        )
         print(f"✓ Stored {len(documents[:10])} documents in vector database")
 
         # Add context to MCP handler
