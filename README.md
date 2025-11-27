@@ -72,7 +72,7 @@ python -m gemini_stock_analysis.main
 ## Project Structure
 
 ```
-gemini_stock_analysis/
+src/
 ├── __init__.py
 ├── main.py                 # Main application entry point
 ├── config.py               # Configuration management

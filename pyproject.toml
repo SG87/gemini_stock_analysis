@@ -4,12 +4,13 @@ version = "0.1.0"
 description = "Stock analysis project using Gemini API, MCP, and vector databases with Google Sheets input"
 authors = ["Your Name <your.email@example.com>"]
 readme = "README.md"
-packages = [{include = "gemini_stock_analysis"}]
+packages = [{include = "gemini_stock_analysis", from = "src"}]
 
 [tool.poetry.dependencies]
 python = ">=3.12,<3.13"
 google-generativeai = "^0.8.0"
 google-api-python-client = "^2.150.0"
+google-auth = "^2.43.0"
 google-auth-httplib2 = "^0.2.0"
 google-auth-oauthlib = "^1.2.1"
 chromadb = "^0.5.0"

@@ -1,0 +1,24 @@
+{
+    "venvPath": "${workspaceFolder}",
+    "venv": ".venv",
+    "executionEnvironments": [
+        {
+            "root": "${workspaceFolder}",
+            "pythonVersion": "3.12",
+            "pythonPlatform": "Darwin",
+            "extraPaths": [
+                "${workspaceFolder}",
+                "${workspaceFolder}/src"
+            ]
+        }
+    ],
+    "include": [
+        "src"
+    ],
+    "exclude": [
+        "**/__pycache__",
+        "**/.venv",
+        "**/node_modules"
+    ]
+}
+
