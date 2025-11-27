@@ -7,13 +7,12 @@
             "pythonVersion": "3.12",
             "pythonPlatform": "Darwin",
             "extraPaths": [
-                "${workspaceFolder}",
-                "${workspaceFolder}/src"
+                "${workspaceFolder}"
             ]
         }
     ],
     "include": [
-        "src"
+        "gemini_stock_analysis"
     ],
     "exclude": [
         "**/__pycache__",

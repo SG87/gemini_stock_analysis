@@ -4,7 +4,7 @@ version = "0.1.0"
 description = "Stock analysis project using Gemini API, MCP, and vector databases with Google Sheets input"
 authors = ["Your Name <your.email@example.com>"]
 readme = "README.md"
-packages = [{include = "gemini_stock_analysis", from = "src"}]
+packages = [{include = "gemini_stock_analysis"}]
 
 [tool.poetry.dependencies]
 python = ">=3.12,<3.13"
