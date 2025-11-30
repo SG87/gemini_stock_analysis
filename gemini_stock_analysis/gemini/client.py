@@ -1,20 +1,31 @@
 """Gemini API client for AI-powered analysis."""
-
-from typing import Any, Dict, List, Optional
+import json
+from typing import Dict, List, Optional
 
 import google.generativeai as genai
 
-from ..config import Settings
+from gemini_stock_analysis.config import Settings
 
 
 class GeminiClient:
     """Client for interacting with Google's Gemini API."""
 
     def __init__(self, settings: Settings):
-        """Initialize the Gemini client with API key."""
+        """
+        Initialize the Gemini client with API key.
+
+        :param settings: Settings object
+        """
         self.settings = settings
         genai.configure(api_key=settings.gemini_api_key)
-        self.model = genai.GenerativeModel("gemini-pro")
+
+        with open("gemini_model_config.json", "r") as gemini_config_file:
+            gemini_model_config = json.loads(gemini_config_file.read())
+
+
+        self.model = genai.GenerativeModel(gemini_model_config.get("model"))
+        self.embeddings_model = gemini_model_config.get("embeddings_model")
+        self.embedding_size = gemini_model_config.get("embedding_size")
 
     def generate_embeddings(self, texts: List[str]) -> List[List[float]]:
         """
@@ -28,21 +39,17 @@ class GeminiClient:
         """
         embeddings = []
         for text in texts:
-            try:
-                # Try to use Gemini's embedding model
-                # Note: You may need to use 'models/text-embedding-004' or similar
-                # depending on what's available in your API version
-                embedding_model = genai.EmbeddingModel("models/embedding-001")
-                result = embedding_model.embed_content(text)
-                embeddings.append(result["embedding"])
-            except Exception as e:
-                # If Gemini embedding model is not available, return None
-                # The vector store can use its default embedding function instead
-                print(
-                    f"Warning: Could not generate embedding with Gemini: {e}. "
-                    "Vector store will use default embeddings."
+            # Try to use Gemini's embedding model
+            # Note: You may need to use 'models/text-embedding-004' or similar
+            # depending on what's available in your API version
+            result = genai.embed_content(
+                    model=self.embeddings_model,
+                    content=text,
+                    task_type="retrieval_document",
+                    output_dimensionality=self.embedding_size,
+                    title="Custom Query",
                 )
-                return None
+            embeddings.append(result["embedding"])
 
         return embeddings
 
@@ -88,4 +95,3 @@ class GeminiClient:
             return response.text
         except Exception as e:
             raise Exception(f"Error in chat: {str(e)}")
-

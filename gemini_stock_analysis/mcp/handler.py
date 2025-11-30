@@ -143,5 +143,3 @@ class MCPHandler:
         parts.append(user_prompt)
 
         return "\n".join(parts)
-
-

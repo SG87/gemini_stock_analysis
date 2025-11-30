@@ -4,9 +4,11 @@ from typing import List, Optional
 
 import chromadb
 from chromadb.config import Settings as ChromaSettings
-from chromadb.utils import embedding_functions
 
-from ..config import Settings as AppSettings
+# from chromadb.utils import embedding_functions
+
+from gemini_stock_analysis.config import Settings as AppSettings
+from gemini_stock_analysis.vector_db.gemini_embedding_function import GeminiEmbeddingFunction
 
 
 class VectorStore:
@@ -20,14 +22,7 @@ class VectorStore:
             path=settings.chroma_db_path,
             settings=ChromaSettings(anonymized_telemetry=False),
         )
-        # Use a simpler embedding function that works better on macOS
-        # DefaultSentenceTransformerEmbeddingFunction can have CoreML issues
-        try:
-            # Try to use the default embedding function
-            self.embedding_function = None  # Let ChromaDB use default
-        except Exception:
-            # Fallback to a simpler embedding function if default fails
-            self.embedding_function = embedding_functions.DefaultEmbeddingFunction()
+
         self.collection = self._get_or_create_collection()
 
     def _get_or_create_collection(self) -> chromadb.Collection:
@@ -37,7 +32,9 @@ class VectorStore:
         except Exception:
             # Create collection - if embedding function is None, ChromaDB will use default
             # which may have CoreML issues, but we'll handle that in add_documents
-            return self.client.create_collection(name=self.collection_name)
+            return self.client.create_collection(
+                name=self.collection_name, embedding_function=GeminiEmbeddingFunction()
+            )
 
     def add_documents(
         self,
@@ -60,9 +57,7 @@ class VectorStore:
             metadatas_list = None
         else:
             # Replace empty dicts with a minimal dict (ChromaDB doesn't accept empty dicts)
-            metadatas_list = [
-                (m if m else {"_placeholder": "true"}) for m in metadatas
-            ]
+            metadatas_list = [(m if m else {"_placeholder": "true"}) for m in metadatas]
 
         try:
             if embeddings is None:
@@ -98,18 +93,16 @@ class VectorStore:
                     hash_obj = hashlib.sha256(doc.encode())
                     hash_bytes = hash_obj.digest()
                     # Create a 128-dimensional embedding from hash
-                    embedding = [
-                        float(b) / 255.0 for b in hash_bytes[:128]
-                    ] + [0.0] * (128 - len(hash_bytes[:128]))
+                    embedding = [float(b) / 255.0 for b in hash_bytes[:128]] + [0.0] * (
+                        128 - len(hash_bytes[:128])
+                    )
                     fallback_embeddings.append(embedding)
 
                 # Ensure metadatas are not empty dicts
                 if metadatas is None:
                     metadatas_list = None
                 else:
-                    metadatas_list = [
-                        (m if m else {"_placeholder": "true"}) for m in metadatas
-                    ]
+                    metadatas_list = [(m if m else {"_placeholder": "true"}) for m in metadatas]
 
                 self.collection.add(
                     embeddings=fallback_embeddings,
@@ -156,9 +149,9 @@ class VectorStore:
 
                 hash_obj = hashlib.sha256(query.encode())
                 hash_bytes = hash_obj.digest()
-                fallback_embedding = [
-                    float(b) / 255.0 for b in hash_bytes[:128]
-                ] + [0.0] * (128 - len(hash_bytes[:128]))
+                fallback_embedding = [float(b) / 255.0 for b in hash_bytes[:128]] + [0.0] * (
+                    128 - len(hash_bytes[:128])
+                )
 
                 results = self.collection.query(
                     query_embeddings=[fallback_embedding],
@@ -184,5 +177,3 @@ class VectorStore:
             }
             for i in range(len(results["ids"]))
         ]
-
-

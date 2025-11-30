@@ -48,7 +48,7 @@ class SheetsReader:
 
         return build("sheets", "v4", credentials=creds)
 
-    def read_sheet(self, range_name: str = "A1:Z1000") -> pd.DataFrame:
+    def read_sheet(self, range_name: str = "A1:B100") -> pd.DataFrame:
         """
         Read data from the configured Google Sheet.
 
@@ -109,5 +109,3 @@ class SheetsReader:
         except HttpError as error:
             print(f"An error occurred: {error}")
             raise
-
-

@@ -1,15 +1,14 @@
 """Main application entry point."""
 
 import sys
-from pathlib import Path
 
 import pandas as pd
 
-from .config import get_settings
-from .gemini.client import GeminiClient
-from .mcp.handler import MCPHandler
-from .sheets.reader import SheetsReader
-from .vector_db.store import VectorStore
+from gemini_stock_analysis.config import get_settings
+from gemini_stock_analysis.gemini.client import GeminiClient
+from gemini_stock_analysis.mcp.handler import MCPHandler
+from gemini_stock_analysis.sheets.reader import SheetsReader
+from gemini_stock_analysis.vector_db.store import VectorStore
 
 
 def main() -> None:
@@ -59,13 +58,15 @@ def main() -> None:
             documents.append(doc_text)
 
             # Store metadata
-            metadata = {col: str(val) for col, val in row.items() if pd.notna(val)}
+            metadata = {col: str(val) for col, val in row.items() if pd.notna(val) or val != ""}
             metadata["row_index"] = str(idx)
             metadatas.append(metadata)
 
         # Generate embeddings and store in vector database
         print("Generating embeddings...")
-        embeddings = gemini_client.generate_embeddings(documents[:10])  # Limit for demo
+        embeddings = gemini_client.generate_embeddings(documents)
+
+        print("Embeddings size:", len(embeddings[0]))
 
         # Store in vector database
         print("Storing in vector database...")
@@ -73,6 +74,7 @@ def main() -> None:
         if not embeddings:
             # Generate fallback embeddings if Gemini embeddings are not available
             import hashlib
+
             print("Using fallback embeddings (Gemini embeddings not available)")
             embeddings = []
             for doc in documents[:10]:
@@ -84,12 +86,12 @@ def main() -> None:
                 embeddings.append(embedding)
 
         vector_store.add_documents(
-            documents=documents[:10],
+            documents=documents,
             embeddings=embeddings,
-            metadatas=metadatas[:10],
-            ids=[f"row_{i}" for i in range(len(documents[:10]))],
+            metadatas=metadatas,
+            ids=[f"row_{i}" for i in range(len(documents))],
         )
-        print(f"✓ Stored {len(documents[:10])} documents in vector database")
+        print(f"✓ Stored {len(documents)} documents in vector database")
 
         # Add context to MCP handler
         mcp_handler.add_context(
@@ -123,7 +125,7 @@ def main() -> None:
         print(f"\nSearch results for: '{search_query}'")
         if search_results.get("documents"):
             for i, doc in enumerate(search_results["documents"][0][:3], 1):
-                print(f"\n{i}. {doc[:200]}...")
+                print(f"\n{i}. {doc}")
 
         print("\n✓ Analysis complete!")
 
@@ -143,4 +145,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

@@ -1,0 +1,5 @@
+{
+    "model": "gemini-3-pro-preview",
+    "embeddings_model": "gemini-embedding-001",
+    "embeddings_size": 3072
+}
