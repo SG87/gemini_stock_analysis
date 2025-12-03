@@ -6,7 +6,6 @@ import pandas as pd
 
 from gemini_stock_analysis.config import get_settings
 from gemini_stock_analysis.gemini.client import GeminiClient
-from gemini_stock_analysis.mcp.handler import MCPHandler
 from gemini_stock_analysis.sheets.reader import SheetsReader
 from gemini_stock_analysis.vector_db.store import VectorStore
 
@@ -28,9 +27,6 @@ def main() -> None:
 
         vector_store = VectorStore(settings)
         print("✓ Vector database initialized")
-
-        mcp_handler = MCPHandler(settings)
-        print("✓ MCP handler initialized")
 
         # Read data from Google Sheets
         print("\nReading data from Google Sheets...")
@@ -92,42 +88,6 @@ def main() -> None:
             ids=[f"row_{i}" for i in range(len(documents))],
         )
         print(f"✓ Stored {len(documents)} documents in vector database")
-
-        # Add context to MCP handler
-        mcp_handler.add_context(
-            role="system",
-            content="You are analyzing stock data from Google Sheets. Use the provided context to answer questions.",
-        )
-        mcp_handler.add_context(
-            role="user",
-            content=f"Loaded {len(df)} rows of stock data. Columns: {', '.join(df.columns.tolist())}",
-        )
-
-        # Perform analysis using Gemini
-        print("\nPerforming AI analysis...")
-        analysis_prompt = mcp_handler.build_prompt(
-            user_prompt="Analyze the stock data and provide key insights. What trends do you notice?",
-            include_context=True,
-        )
-
-        analysis = gemini_client.analyze(analysis_prompt)
-        print("\n" + "=" * 80)
-        print("ANALYSIS RESULTS:")
-        print("=" * 80)
-        print(analysis)
-        print("=" * 80)
-
-        # Demonstrate semantic search
-        print("\nDemonstrating semantic search...")
-        search_query = "What are the top performing stocks?"
-        search_results = vector_store.search(query=search_query, n_results=3)
-
-        print(f"\nSearch results for: '{search_query}'")
-        if search_results.get("documents"):
-            for i, doc in enumerate(search_results["documents"][0][:3], 1):
-                print(f"\n{i}. {doc}")
-
-        print("\n✓ Analysis complete!")
 
     except FileNotFoundError as e:
         print(f"Error: {e}", file=sys.stderr)
