@@ -101,14 +101,15 @@ class GeminiClient:
 
         chat_model = genai.GenerativeModel(
             model_name=self.model.model_name,
-            tools=model_tools,
-            system_instruction=system_prompt,
+            system_instruction=system_prompt
         )
 
-        chat = chat_model.start_chat(enable_automatic_function_calling=False)
+        chat = chat_model.start_chat()
 
         # 4. Send message to Gemini
-        response = chat.send_message(message)
+        response = chat.send_message(message, tools=model_tools)
+
+        print(response.candidates)
 
         # 5. Loop: Handle Tool Calls until Gemini is satisfied
         while True:
