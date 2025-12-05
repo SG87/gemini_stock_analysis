@@ -75,48 +75,78 @@ class GeminiClient:
         except Exception as e:
             raise Exception(f"Error generating content: {str(e)}")
 
-    async def chat(self, message: str, mcp_session: ClientSession) -> str:
+    async def chat(
+        self, message: str, mcp_session: ClientSession, context: Optional[str] = None
+    ) -> str:
         # 1. Get available tools from MCP Server
         available_tools = await mcp_session.list_tools()
         gemini_tool_definitions = self.mcp_to_gemini_tools(available_tools)
 
-        chat = self.model.start_chat()
+        # 2. Define system instruction
+        system_prompt = (
+            "You are a helpful assistant designed to analyze stock data using the provided tools. "
+            "Please use the available tools to answer the user's question, such as searching for stocks or listing them. "
+            "If the answer is not directly available, use the search or list tools to find relevant information."
+        )
+        if context:
+            system_prompt += f"\n\nAdditional Context:\n{context}"
 
-        # 3. Send message to Gemini with tools
-        response = chat.send_message(
-            message, tools=[types.Tool(function_declarations=gemini_tool_definitions)]
+        # 3. Initialize model with tools and system instruction
+        # We create a new instance here to bind the dynamic tools and system instruction
+        
+        # Only pass tools if we actually have them
+        model_tools = None
+        if gemini_tool_definitions:
+            model_tools = [types.Tool(function_declarations=gemini_tool_definitions)]
+
+        chat_model = genai.GenerativeModel(
+            model_name=self.model.model_name,
+            tools=model_tools,
+            system_instruction=system_prompt,
         )
 
-        # 4. Loop: Handle Tool Calls until Gemini is satisfied
-        # Note: In a real app, you might want a limit to prevent infinite loops
+        chat = chat_model.start_chat(enable_automatic_function_calling=False)
+
+        # 4. Send message to Gemini
+        response = chat.send_message(message)
+
+        # 5. Loop: Handle Tool Calls until Gemini is satisfied
         while True:
             # Check if Gemini wants to call a function
             function_call = None
-            for part in response.candidates[0].content.parts:
-                if part.function_call:
-                    function_call = part.function_call
-                    break
+            if response.candidates and response.candidates[0].content.parts:
+                for part in response.candidates[0].content.parts:
+                    if part.function_call:
+                        function_call = part.function_call
+                        break
 
             if not function_call:
                 break  # No tool call, we have the final answer
 
             # Execute the tool on the MCP Server
             print(f"🤖 Gemini requesting tool: {function_call.name}")
-            result: CallToolResult = await mcp_session.call_tool(
-                function_call.name, arguments=function_call.args
-            )
+            try:
+                result: CallToolResult = await mcp_session.call_tool(
+                    function_call.name, arguments=function_call.args
+                )
+                tool_output = result.content[0].text
+                print(f"✅ Tool Result: {tool_output}")
+            except Exception as e:
+                tool_output = f"Error executing tool: {str(e)}"
+                print(f"❌ Tool Error: {tool_output}")
 
             # Send result back to Gemini
-            tool_output = result.content[0].text
-            print(f"✅ Tool Result: {tool_output}")
-
-            response = chat.send_message(
-                types.Part.from_function_response(
-                    name=function_call.name, response={"result": tool_output}
+            try:
+                response = chat.send_message(
+                    types.Part.from_function_response(
+                        name=function_call.name, response={"result": tool_output}
+                    )
                 )
-            )
+            except Exception as e:
+                print(f"Error sending tool result to Gemini: {e}")
+                raise
 
-        # 5. Return final text to user
+        # 6. Return final text to user
         return {"response": response.text}
 
     def mcp_to_gemini_tools(self, mcp_tools):

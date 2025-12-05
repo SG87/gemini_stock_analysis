@@ -61,6 +61,7 @@ gemini_client = GeminiClient(settings)
 # --- Request Models ---
 class ChatRequest(BaseModel):
     message: str
+    context: str | None = None
 
 
 # --- The Chat Endpoint ---
@@ -69,7 +70,9 @@ async def chat(request: ChatRequest):
     if not mcp_session:
         raise HTTPException(status_code=503, detail="MCP Server not connected")
 
-    response = await gemini_client.chat(message=request.message, mcp_session=mcp_session)
+    response = await gemini_client.chat(
+        message=request.message, mcp_session=mcp_session, context=request.context
+    )
 
     return response
 

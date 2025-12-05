@@ -38,17 +38,25 @@ async def health():
     return {"status": "ok"}
 
 
-@app.get("/search", operation_id="search_vector_db")
-async def search_vector_db(query: str, n_results: int = 5):
+@app.get("/search", operation_id="search_stocks")
+async def search_stocks(query: str, n_results: int = 5):
     """
     Search the vector database for similar documents.
     """
     return vector_store.search(query=query, n_results=n_results)
 
 
+@app.get("/list", operation_id="list_stocks")
+async def list_stocks():
+    """
+    List all stocks in the vector database.
+    """
+    return vector_store.get_all_documents()
+
+
 if __name__ == "__main__":
     # 2. MCP setup
-    mcp = FastApiMCP(app, name="GeminiStockAnalysis", include_operations=[search_vector_db])
+    mcp = FastApiMCP(app, name="GeminiStockAnalysis", include_operations=[search_stocks, list_stocks])
     mcp.mount_sse()
 
     uvicorn.run(app, host="0.0.0.0", port=8000)
